@@ -789,6 +789,65 @@ function App() {
     };
   }, [isMetaMaskReady]);
 
+  // Definisi viewSignedDocuments sebelum digunakan
+  const viewSignedDocuments = useCallback(async () => {
+    if (!isConnected || !account) {
+      setError('Silakan hubungkan wallet terlebih dahulu');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
+      
+      // Ambil semua event DocumentSigned
+      const filter = contract.filters.DocumentSigned(null, account); // Filter berdasarkan signer address
+      const events = await contract.queryFilter(filter);
+      console.log('Events dari blockchain:', events);
+      
+      // Format data dokumen
+      const documents = await Promise.all(events.map(async (eventDoc) => {
+        // Bersihkan hash dokumen (hapus 0x jika ada)
+        const docHash = eventDoc.args.documentHash;
+        const cleanHash = docHash.startsWith('0x') ? 
+          docHash.substring(2).toLowerCase() : docHash.toLowerCase();
+          
+        // Gunakan transaction hash dari mapping jika ada
+        let txHash = eventDoc.transactionHash;
+        if (TX_HASH_MAPPING[cleanHash]) {
+          console.log(`Using fixed txHash mapping for ${cleanHash}`);
+          txHash = TX_HASH_MAPPING[cleanHash];
+        }
+        
+        console.log(`Document ${cleanHash} memiliki txHash: ${txHash}`);
+        
+        return {
+          hash: eventDoc.args.documentHash,
+          signer: eventDoc.args.signer,
+          timestamp: new Date(eventDoc.args.timestamp * 1000).toLocaleString(),
+          transactionHash: txHash, // Gunakan transaction hash yang benar dari mapping
+          blockNumber: eventDoc.blockNumber
+        };
+      }));
+
+      // Urutkan berdasarkan timestamp terbaru
+      documents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      setDocumentHistory(documents);
+      setError('');
+
+      if (documents.length === 0) {
+        showSuccessModal('Riwayat Dokumen', 'Belum ada dokumen yang ditandatangani dengan wallet ini');
+      }
+    } catch (error) {
+      console.error('Error in viewSignedDocuments:', error);
+      setError('Error saat mengambil riwayat dokumen: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [isConnected, account]);
+
   // Tambahkan useEffect untuk memuat dokumen saat wallet terkoneksi
   useEffect(() => {
     if (isConnected && account) {
@@ -796,6 +855,11 @@ function App() {
       viewSignedDocuments();
     }
   }, [isConnected, account, viewSignedDocuments]);
+
+  const showSuccessModal = (title, body) => {
+    setModalContent({ title, body });
+    setShowModal(true);
+  };
 
   const connectWallet = async () => {
     if (!isMetaMaskReady) {
@@ -825,11 +889,6 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const showSuccessModal = (title, body) => {
-    setModalContent({ title, body });
-    setShowModal(true);
   };
 
   const handleFileChange = (e) => {
@@ -1080,66 +1139,6 @@ function App() {
       setLoading(false);
     }
   };
-
-
-
-  const viewSignedDocuments = useCallback(async () => {
-    if (!isConnected || !account) {
-      setError('Silakan hubungkan wallet terlebih dahulu');
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
-      
-      // Ambil semua event DocumentSigned
-      const filter = contract.filters.DocumentSigned(null, account); // Filter berdasarkan signer address
-      const events = await contract.queryFilter(filter);
-      console.log('Events dari blockchain:', events);
-      
-      // Format data dokumen
-      const documents = await Promise.all(events.map(async (eventDoc) => {
-        // Bersihkan hash dokumen (hapus 0x jika ada)
-        const docHash = eventDoc.args.documentHash;
-        const cleanHash = docHash.startsWith('0x') ? 
-          docHash.substring(2).toLowerCase() : docHash.toLowerCase();
-          
-        // Gunakan transaction hash dari mapping jika ada
-        let txHash = eventDoc.transactionHash;
-        if (TX_HASH_MAPPING[cleanHash]) {
-          console.log(`Using fixed txHash mapping for ${cleanHash}`);
-          txHash = TX_HASH_MAPPING[cleanHash];
-        }
-        
-        console.log(`Document ${cleanHash} memiliki txHash: ${txHash}`);
-        
-        return {
-          hash: eventDoc.args.documentHash,
-          signer: eventDoc.args.signer,
-          timestamp: new Date(eventDoc.args.timestamp * 1000).toLocaleString(),
-          transactionHash: txHash, // Gunakan transaction hash yang benar dari mapping
-          blockNumber: eventDoc.blockNumber
-        };
-      }));
-
-      // Urutkan berdasarkan timestamp terbaru
-      documents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-      setDocumentHistory(documents);
-      setError('');
-
-      if (documents.length === 0) {
-        showSuccessModal('Riwayat Dokumen', 'Belum ada dokumen yang ditandatangani dengan wallet ini');
-      }
-    } catch (error) {
-      console.error('Error in viewSignedDocuments:', error);
-      setError('Error saat mengambil riwayat dokumen: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [isConnected, account]);
 
 
 
