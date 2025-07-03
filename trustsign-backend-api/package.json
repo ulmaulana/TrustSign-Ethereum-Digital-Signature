@@ -2,10 +2,10 @@
   "name": "trustsign-api",
   "version": "1.0.0",
   "description": "TrustSign Backend API",
-  "main": "server-demo.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server-demo.js",
-    "dev": "node server-demo.js"
+    "start": "node index.js",
+    "dev": "node index.js"
   },
   "dependencies": {
     "express": "^5.1.0",

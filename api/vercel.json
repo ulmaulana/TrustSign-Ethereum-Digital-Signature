@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "trustsign-api",
   "builds": [
     {
       "src": "index.js",

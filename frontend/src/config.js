@@ -5,7 +5,7 @@ const config = {
     ENV: 'development'
   },
   production: {
-    API_URL: 'https://trustsign-api-backend.vercel.app', // API yang akan kita deploy
+    API_URL: 'https://trustsign-api.vercel.app', // API dari folder api/ di GitHub
     ENV: 'production'
   }
 };
