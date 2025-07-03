@@ -74,5 +74,43 @@ Vercel memiliki batasan storage. Untuk production:
 
 ## ✅ **Status Deployment**
 - [x] Frontend configuration fixed
-- [ ] Backend API deployment needed
-- [ ] Testing required 
+- [x] Backend API demo created
+- [x] Mock data untuk testing `testdoc1-mcnuiwop-ks4t10`
+- [ ] Backend API deployment to Vercel needed
+- [ ] Testing required
+
+## 🚀 **Cara Deploy Backend API**
+
+### **Option 1: Manual Deploy (Recommended)**
+1. Buat folder baru untuk backend:
+   ```bash
+   mkdir trustsign-api
+   cd trustsign-api
+   ```
+
+2. Copy files yang diperlukan:
+   ```bash
+   # Copy dari project utama
+   cp ../server-demo.js ./index.js
+   cp ../package-api.json ./package.json  
+   cp ../api-vercel.json ./vercel.json
+   ```
+
+3. Deploy ke Vercel:
+   ```bash
+   vercel --prod
+   # Set domain name: trustsign-api-backend
+   ```
+
+### **Option 2: Quick Deploy**
+```bash
+# Dari folder project utama
+npm run deploy-backend
+```
+
+## 🧪 **Testing Certificate Page**
+
+Setelah backend API di-deploy, test dengan URL:
+- `https://trustsign-ethereum-digital-signatur.vercel.app/certificate/testdoc1-mcnuiwop-ks4t10`
+
+Expected result: Halaman certificate dengan data mock yang valid. 
