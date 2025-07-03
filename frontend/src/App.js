@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import DigitalSignature from './contracts/DigitalSignature.json';
 import { QRCodeSVG } from 'qrcode.react';
+import { API_CONFIG, getApiUrl } from './config';
 import { 
   Container, 
   Row, 
@@ -156,7 +157,7 @@ function CertificatePage() {
       setError('');
       console.log('Trying to recover document with hash:', hash);
       
-      const response = await fetch(`http://localhost:5000/api/recover/${hash}`);
+      const response = await fetch(getApiUrl(`/api/recover/${hash}`));
       const data = await response.json();
       
       if (response.ok) {
@@ -181,8 +182,8 @@ function CertificatePage() {
         setLoading(true);
         console.log('Fetching certificate data for hash:', hash);
         
-        // Fetch ke backend port 5000
-        const res = await fetch(`http://localhost:5000/api/certificate/${hash}`);
+        // Fetch ke backend API
+        const res = await fetch(getApiUrl(`/api/certificate/${hash}`));
         
         if (!res.ok) {
           const errorData = await res.json();
@@ -193,7 +194,7 @@ function CertificatePage() {
         const data = await res.json();
         console.log('Certificate data received:', data);
         
-        setPdfUrl(`http://localhost:5000${data.pdfUrl}`); // URL lengkap ke PDF
+        setPdfUrl(`${API_CONFIG.BASE_URL}${data.pdfUrl}`); // URL lengkap ke PDF
         setSignature(data.signature);
         setSigner(data.signer);
         
@@ -201,7 +202,7 @@ function CertificatePage() {
         if (!data.txHash && data.signature) {
           try {
             // Coba dapatkan txHash dari endpoint khusus
-            const txRes = await fetch(`http://localhost:5000/api/tx-hash/${hash}`);
+            const txRes = await fetch(getApiUrl(`/api/tx-hash/${hash}`));
             const txData = await txRes.json();
             if (txRes.ok && txData.txHash) {
               data.txHash = txData.txHash;
@@ -1041,7 +1042,7 @@ function App() {
       });
       
       console.log('Mengupload file terlebih dahulu...');
-      const uploadRes = await fetch('http://localhost:5000/api/upload-unsigned', {
+      const uploadRes = await fetch(getApiUrl('/api/upload-unsigned'), {
         method: 'POST',
         body: formData
       });
@@ -1095,7 +1096,7 @@ function App() {
       // 13. Update metadata di server dengan info tanda tangan
       updateLoadingStep(6);
       try {
-        const updateRes = await fetch('http://localhost:5000/api/update-signature', {
+        const updateRes = await fetch(getApiUrl('/api/update-signature'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
