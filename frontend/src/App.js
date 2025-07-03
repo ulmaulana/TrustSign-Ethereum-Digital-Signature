@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import DigitalSignature from './contracts/DigitalSignature.json';
 import { QRCodeSVG } from 'qrcode.react';
@@ -685,23 +685,13 @@ function App() {
   const [file, setFile] = useState(null);
   const [hash, setHash] = useState('');
   const [signature, setSignature] = useState('');
-  const [verificationResult, setVerificationResult] = useState('');
-  const [privateKey, setPrivateKey] = useState('');
   const [error, setError] = useState('');
   const [account, setAccount] = useState('');
   const [isConnected, setIsConnected] = useState(false);
-  const [signatureData, setSignatureData] = useState(null);
-  const [originalHash, setOriginalHash] = useState('');
-  const [isDocumentOriginal, setIsDocumentOriginal] = useState(null);
   const [txHash, setTxHash] = useState('');
-  const [signedDocuments, setSignedDocuments] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', body: '' });
-  const [verifyHash, setVerifyHash] = useState('');
-  const [verifySignatureInput, setVerifySignatureInput] = useState('');
-  const [verifyTxHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
 
@@ -758,7 +748,6 @@ function App() {
           console.log('No accounts found');
           setAccount('');
           setIsConnected(false);
-          setSignedDocuments([]);
           setSelectedDocument(null);
         }
       } catch (err) {
@@ -780,7 +769,6 @@ function App() {
         } else {
           setAccount('');
           setIsConnected(false);
-          setSignedDocuments([]);
           setSelectedDocument(null);
         }
       });
@@ -1095,7 +1083,7 @@ function App() {
 
 
 
-  const viewSignedDocuments = async () => {
+  const viewSignedDocuments = useCallback(async () => {
     if (!isConnected || !account) {
       setError('Silakan hubungkan wallet terlebih dahulu');
       return;
@@ -1113,9 +1101,6 @@ function App() {
       
       // Format data dokumen
       const documents = await Promise.all(events.map(async (eventDoc) => {
-        // Ambil data signature dari kontrak
-        const sigData = await contract.getSignature(eventDoc.args.documentHash);
-        
         // Bersihkan hash dokumen (hapus 0x jika ada)
         const docHash = eventDoc.args.documentHash;
         const cleanHash = docHash.startsWith('0x') ? 
@@ -1154,7 +1139,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isConnected, account]);
 
 
 
@@ -1266,8 +1251,6 @@ function App() {
     
     try {
       const data = JSON.parse(result[0].rawValue);
-      setVerifyHash(data.hash);
-      setVerifySignatureInput(data.signature);
       
       // Verifikasi otomatis setelah scan
       const provider = new ethers.providers.Web3Provider(window.ethereum);
