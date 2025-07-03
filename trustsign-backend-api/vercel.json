@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "name": "trustsign-api",
+  "builds": [
+    {
+      "src": "server-demo.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/server-demo.js"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/server-demo.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/server-demo.js"
+    }
+  ],
+  "functions": {
+    "server-demo.js": {
+      "maxDuration": 30
+    }
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+} 
