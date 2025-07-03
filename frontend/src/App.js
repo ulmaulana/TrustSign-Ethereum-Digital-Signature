@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ethers } from 'ethers';
 import DigitalSignature from './contracts/DigitalSignature.json';
 import { QRCodeSVG } from 'qrcode.react';
-import html2canvas from 'html2canvas';
 import { 
   Container, 
   Row, 
@@ -19,12 +18,9 @@ import {
   Spinner,
   Tabs,
   Tab,
-  Accordion,
   ListGroup,
   Tooltip,
-  OverlayTrigger,
-  Dropdown,
-  Collapse
+  OverlayTrigger
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
@@ -32,10 +28,6 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 import { PDFDocument, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
-import VerifyAllHashes from './components/VerifyAllHashes';
-
-// Import UUID untuk generate ID unik
-import { v4 as uuidv4 } from 'uuid';
 
 // Ganti dengan alamat kontrak yang di-deploy di Sepolia
 const CONTRACT_ADDRESS = "0xf07A6d2bfBc038AECCfe76cA4Fb4dca891e3A383";
@@ -117,15 +109,8 @@ function CertificatePage() {
   const [error, setError] = useState('');
   const [showCopyAlert, setShowCopyAlert] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [showDetails, setShowDetails] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [txHash, setTxHash] = useState('');
-  
-  // Format alamat wallet
-  const formatAddress = (address) => {
-    if (!address) return "";
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
   
   // Format waktu
   const formatDate = (date) => {
@@ -195,9 +180,6 @@ function CertificatePage() {
       try {
         setLoading(true);
         console.log('Fetching certificate data for hash:', hash);
-        
-        // Bersihkan hash (hapus 0x jika ada)
-        const cleanHash = hash.startsWith('0x') ? hash.substring(2).toLowerCase() : hash.toLowerCase();
         
         // Fetch ke backend port 5000
         const res = await fetch(`http://localhost:5000/api/certificate/${hash}`);
@@ -719,23 +701,19 @@ function App() {
   const [modalContent, setModalContent] = useState({ title: '', body: '' });
   const [verifyHash, setVerifyHash] = useState('');
   const [verifySignatureInput, setVerifySignatureInput] = useState('');
-  const [verifyTxHash, setVerifyTxHash] = useState('');
+  const [verifyTxHash] = useState('');
   const [verifyResult, setVerifyResult] = useState(null);
   const [verifyLoading, setVerifyLoading] = useState(false);
-  const [qrPosition, setQrPosition] = useState({ x: 0, y: 0 });
-  const [showQrPosition, setShowQrPosition] = useState(false);
-  const [documentUrl, setDocumentUrl] = useState('');
-  const [showDownloadSigned, setShowDownloadSigned] = useState(false);
-  const [showQrPreview, setShowQrPreview] = useState(false);
+
   const [activeTab, setActiveTab] = useState('sign');
   const documentRef = useRef(null);
   const [documentHistory, setDocumentHistory] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [documentFiles, setDocumentFiles] = useState(new Map());
+  const [documentFiles] = useState(new Map());
   const [isMetaMaskReady, setIsMetaMaskReady] = useState(false);
   const [qrCodeData, setQrCodeData] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
+
   const [loadingSteps, setLoadingSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -829,7 +807,7 @@ function App() {
       console.log('Loading documents for account:', account);
       viewSignedDocuments();
     }
-  }, [isConnected, account]);
+  }, [isConnected, account, viewSignedDocuments]);
 
   const connectWallet = async () => {
     if (!isMetaMaskReady) {
@@ -870,7 +848,6 @@ function App() {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
     setError('');
-    setShowDownloadSigned(false);
   };
 
   const generateHash = async () => {
@@ -899,20 +876,7 @@ function App() {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleDocumentClick = (e) => {
-    if (!showQrPosition) return;
-    
-    const rect = e.target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    setQrPosition({ x, y });
-  };
 
-  const generateDocumentUrl = (hash) => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/verify?hash=${hash}`;
-  };
 
   // Fungsi untuk generate URL QR code yang konsisten
   const generateQrCodeData = (docIdString) => {
@@ -978,7 +942,7 @@ function App() {
       const pngImage = await pdfDoc.embedPng(pngImageBytes);
       const pages = pdfDoc.getPages();
       const lastPage = pages[pages.length - 1];
-      const { width, height } = lastPage.getSize();
+      const { width } = lastPage.getSize();
       const qrWidth = 80;
       const qrHeight = 80;
       
@@ -1115,9 +1079,6 @@ function App() {
       const certUrl = `${window.location.origin}/certificate/${docIdString}`;
       console.log('Certificate URL:', certUrl);
       
-      // File unduhan sudah di-set sebelumnya (signedFile)
-      setShowDownloadSigned(true);
-      
       // Auto refresh riwayat dokumen setelah penandatanganan
       await viewSignedDocuments();
       
@@ -1132,147 +1093,7 @@ function App() {
     }
   };
 
-  const verifySignature = async () => {
-    if (!isConnected || !account) {
-      setError('Silakan hubungkan wallet terlebih dahulu');
-      return;
-    }
-    
-    if (!hash || !signature) {
-      setError('Hash dan signature diperlukan');
-      return;
-    }
 
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const network = await provider.getNetwork();
-      
-      // Check if we're on the correct network
-      if (network.chainId !== 31337) { // 31337 is Hardhat local network
-        setError('Silakan hubungkan ke jaringan Hardhat local (chainId: 31337)');
-        return;
-      }
-
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
-      
-      try {
-        // First check if signature exists
-        const sigData = await contract.getSignature(hash);
-        if (sigData.signer === ethers.constants.AddressZero) {
-          setError('Signature tidak ditemukan di blockchain');
-          return;
-        }
-
-        // Then verify the signature
-        const isValid = await contract.verifySignature(account, hash, signature);
-        setVerificationResult(isValid ? 'Valid' : 'Invalid');
-        setError('');
-      } catch (contractError) {
-        if (contractError.code === 'CALL_EXCEPTION') {
-          setError('Kontrak tidak dapat diakses. Pastikan kontrak sudah di-deploy dan Anda terhubung ke jaringan yang benar');
-        } else {
-          setError('Error saat memverifikasi signature: ' + contractError.message);
-        }
-      }
-    } catch (error) {
-      setError('Error saat memverifikasi signature: ' + error.message);
-    }
-  };
-
-  const viewSignatureData = async () => {
-    if (!isConnected || !account) {
-      setError('Silakan hubungkan wallet terlebih dahulu');
-      return;
-    }
-
-    if (!hash) {
-      setError('Silakan generate hash dokumen terlebih dahulu');
-      return;
-    }
-
-    try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
-      
-      const sigData = await contract.getSignature(hash);
-      if (sigData.signer === ethers.constants.AddressZero) {
-        setError('Signature tidak ditemukan di blockchain');
-        return;
-      }
-
-      setSignatureData({
-        documentHash: sigData.documentHash,
-        signer: sigData.signer,
-        timestamp: new Date(sigData.timestamp * 1000).toLocaleString(),
-      });
-      setError('');
-    } catch (error) {
-      setError('Error saat melihat data signature: ' + error.message);
-    }
-  };
-
-  const verifyDocumentOriginality = async () => {
-    if (!isConnected || !account) {
-      setError('Silakan hubungkan wallet terlebih dahulu');
-      return;
-    }
-
-    if (!file) {
-      setError('Silakan pilih file terlebih dahulu');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
-      
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        // Gunakan hashing pada data biner asli dokumen
-        const arrayBuffer = e.target.result;
-        const newHash = ethers.utils.keccak256(new Uint8Array(arrayBuffer));
-        
-        try {
-          // Cari dokumen di blockchain
-          const filter = contract.filters.DocumentSigned();
-          const events = await contract.queryFilter(filter);
-          
-          const document = events.find(event => event.args.documentHash === newHash);
-          
-          if (document) {
-            // Jika dokumen ditemukan, tampilkan informasinya
-            setHash(newHash);
-            setSignature(document.args.signature);
-            setTxHash(document.transactionHash);
-            setVerificationResult('Valid');
-            showSuccessModal('Verifikasi Berhasil', 'Dokumen valid dan terdaftar di blockchain');
-            
-            // Tampilkan informasi detail
-            setSignatureData({
-              documentHash: newHash,
-              signer: document.args.signer,
-              timestamp: new Date(document.args.timestamp * 1000).toLocaleString(),
-              signature: document.args.signature,
-              transactionHash: document.transactionHash
-            });
-          } else {
-            setVerificationResult('Invalid');
-            showSuccessModal('Verifikasi Gagal', 'Dokumen tidak ditemukan di blockchain');
-          }
-          setError('');
-        } catch (error) {
-          setError('Error saat memverifikasi dokumen: ' + error.message);
-        }
-      };
-      // Baca file sebagai ArrayBuffer agar hashing sesuai
-      reader.readAsArrayBuffer(file);
-    } catch (error) {
-      setError('Error saat memverifikasi dokumen: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const viewSignedDocuments = async () => {
     if (!isConnected || !account) {
@@ -1322,7 +1143,6 @@ function App() {
       documents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
       setDocumentHistory(documents);
-      setShowHistory(true);
       setError('');
 
       if (documents.length === 0) {
@@ -1336,71 +1156,7 @@ function App() {
     }
   };
 
-  const verifyExistingDocument = async () => {
-    if (!verifyHash || !verifySignatureInput || !verifyTxHash) {
-      setError('Semua field harus diisi');
-      return;
-    }
 
-    try {
-      setVerifyLoading(true);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, DigitalSignature.abi, provider);
-      
-      // Ambil data signature dan signer
-      const sigData = await contract.getSignature(verifyHash);
-      const signer = sigData.signer !== ethers.constants.AddressZero ? sigData.signer : "Tidak ditemukan";
-      
-      // Verifikasi signature
-      const isValid = await contract.verifySignature(account, verifyHash, verifySignatureInput);
-      
-      // Cek transaction hash
-      const tx = await provider.getTransaction(verifyTxHash);
-      if (!tx) {
-        setVerifyResult({
-          isValid: false,
-          message: 'Transaction hash tidak valid',
-          details: {
-            hash: verifyHash,
-            signature: verifySignatureInput,
-            signer: signer,
-            transactionHash: verifyTxHash
-          }
-        });
-        return;
-      }
-      
-      // Ambil receipt untuk mendapatkan block number
-      const receipt = await provider.getTransactionReceipt(verifyTxHash);
-      const blockNumber = receipt ? receipt.blockNumber : 'Tidak tersedia';
-      
-      // Ambil timestamp dari block
-      let timestamp = new Date().toLocaleString();
-      if (blockNumber !== 'Tidak tersedia') {
-        const block = await provider.getBlock(blockNumber);
-        if (block && block.timestamp) {
-          timestamp = new Date(block.timestamp * 1000).toLocaleString();
-        }
-      }
-
-      setVerifyResult({
-        isValid,
-        message: isValid ? 'Dokumen valid dan terdaftar di blockchain' : 'Dokumen tidak valid',
-        details: {
-          hash: verifyHash,
-          signature: verifySignatureInput,
-          signer: signer,
-          transactionHash: verifyTxHash,
-          blockNumber: blockNumber,
-          timestamp: timestamp
-        }
-      });
-    } catch (error) {
-      setError('Error saat memverifikasi dokumen: ' + error.message);
-    } finally {
-      setVerifyLoading(false);
-    }
-  };
 
   const downloadSignedDocument = async () => {
     if (!file) return;
@@ -1424,10 +1180,6 @@ function App() {
     setFile(null);
     setHash('');
     setSignature('');
-    setVerificationResult('');
-    setSignatureData(null);
-    setSignedDocuments([]);
-    setShowHistory(false);
     setSelectedDocument(null);
     setError('');
     showSuccessModal('Wallet Terputus', 'MetaMask berhasil terputus!');
