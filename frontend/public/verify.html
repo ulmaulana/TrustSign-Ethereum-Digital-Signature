@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifikasi Dokumen</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .verifikasi-container {
+      max-width: 800px;
+      margin: 3rem auto;
+    }
+    .card {
+      border-radius: 1rem;
+      overflow: hidden;
+      box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+      border: none;
+    }
+    .card-header {
+      background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+      color: white;
+      padding: 1.5rem;
+    }
+    .upload-area {
+      border: 2px dashed #ced4da;
+      border-radius: 0.5rem;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s;
+      background-color: #f8f9fa;
+      cursor: pointer;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #4e73df;
+      background-color: #eef2ff;
+    }
+    .upload-icon {
+      font-size: 3rem;
+      color: #4e73df;
+      margin-bottom: 1rem;
+    }
+    .verified-badge {
+      position: absolute;
+      top: -15px;
+      right: -15px;
+      width: 70px;
+      height: 70px;
+      background-color: #28a745;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+      z-index: 10;
+    }
+    .invalid-badge {
+      background-color: #dc3545;
+    }
+    .result-card {
+      transition: all 0.3s;
+      position: relative;
+    }
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-dark bg-dark navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand" href="/">
+        <i class="fas fa-file-signature me-2"></i>
+        Digital Signature Blockchain
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="/">
+              <i class="fas fa-home me-1"></i> Beranda
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="verifikasi-container container">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="mb-0">
+          <i class="fas fa-shield-alt me-2"></i>
+          Verifikasi Dokumen Bertanda Tangan
+        </h2>
+        <p class="text-white-50 mb-0">
+          Upload dokumen PDF untuk memverifikasi keasliannya di blockchain
+        </p>
+      </div>
+      <div class="card-body p-4">
+        <div class="mb-4">
+          <p>
+            Dokumen yang ditandatangani secara digital di platform ini memiliki tanda tangan yang disimpan di blockchain,
+            sehingga keaslian dokumen dapat diverifikasi kapan saja.
+          </p>
+        </div>
+        
+        <div id="upload-area" class="upload-area mb-4">
+          <input type="file" id="file-input" class="d-none" accept="application/pdf" />
+          <div class="upload-icon">
+            <i class="fas fa-upload"></i>
+          </div>
+          <h5>Klik atau seret dokumen PDF di sini</h5>
+          <p class="text-muted mb-0">PDF bertanda tangan akan diverifikasi secara otomatis</p>
+        </div>
+        
+        <div id="loading-overlay" class="loading-overlay d-none">
+          <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+          <h4>Memverifikasi dokumen...</h4>
+          <p>Mencari hash di blockchain...</p>
+        </div>
+        
+        <div id="result-container" class="d-none">
+          <!-- Hasil verifikasi akan ditampilkan di sini -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h5>Digital Signature Blockchain</h5>
+          <p class="text-white-50 mb-0">Verifikasi keaslian dokumen dengan teknologi blockchain</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p class="mb-0">© 2024 Digital Signature Blockchain</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const uploadArea = document.getElementById('upload-area');
+      const fileInput = document.getElementById('file-input');
+      const resultContainer = document.getElementById('result-container');
+      const loadingOverlay = document.getElementById('loading-overlay');
+      
+      // Setup drag & drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+          uploadArea.classList.add('dragover');
+        });
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, () => {
+          uploadArea.classList.remove('dragover');
+        });
+      });
+      
+      uploadArea.addEventListener('drop', handleDrop);
+      uploadArea.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', handleFileSelect);
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length) {
+          handleFiles(files[0]);
+        }
+      }
+      
+      function handleFileSelect(e) {
+        const files = e.target.files;
+        if (files.length) {
+          handleFiles(files[0]);
+        }
+      }
+      
+      function handleFiles(file) {
+        if (file.type !== 'application/pdf') {
+          alert('Hanya file PDF yang dapat diverifikasi');
+          return;
+        }
+        
+        verifyDocument(file);
+      }
+      
+      async function verifyDocument(file) {
+        try {
+          showLoading(true);
+          
+          // 1. Baca file sebagai ArrayBuffer untuk hashing
+          const arrayBuffer = await file.arrayBuffer();
+          
+          // 2. Hitung hash dari file
+          const hashArray = ethers.utils.arrayify(ethers.utils.keccak256(new Uint8Array(arrayBuffer)));
+          const fileHash = ethers.utils.hexlify(hashArray);
+          
+          console.log('File Hash:', fileHash);
+          
+          // 3. Coba extrak hash dari QR code di PDF
+          const qrHash = await extractHashFromPDF(file);
+          
+          // Cari di server
+          let result = null;
+          
+          // Coba dengan hash file dulu
+          try {
+            result = await fetchVerificationResult(fileHash);
+          } catch (err) {
+            console.log('File hash not found, trying QR hash');
+            
+            // Jika hash file tidak ditemukan, coba dengan hash QR
+            if (qrHash) {
+              try {
+                result = await fetchVerificationResult(qrHash);
+              } catch (qrErr) {
+                console.log('QR hash not found either');
+              }
+            }
+          }
+          
+          if (result) {
+            // Dokumen terverifikasi!
+            showVerifiedResult(result, file);
+          } else {
+            // Dokumen tidak terverifikasi
+            showUnverifiedResult(fileHash, qrHash);
+          }
+        } catch (err) {
+          console.error('Verification error:', err);
+          showError(err.message);
+        } finally {
+          showLoading(false);
+        }
+      }
+      
+      async function extractHashFromPDF(file) {
+        // Karena ini adalah versi sederhana, kita tidak melakukan ekstraksi QR code
+        // Ekstraksi QR code membutuhkan library tambahan yang rumit untuk HTML biasa
+        // Untuk implementasi lengkapnya di React component
+        
+        return null; // Di implementasi nyata, ini akan mengembalikan hash dari QR code
+      }
+      
+      async function fetchVerificationResult(hash) {
+        const response = await fetch(`http://localhost:5000/api/find-document/${hash}`);
+        
+        if (!response.ok) {
+          throw new Error('Dokumen tidak ditemukan');
+        }
+        
+        return await response.json();
+      }
+      
+      function showVerifiedResult(result, file) {
+        resultContainer.innerHTML = `
+          <div class="result-card mb-4">
+            <div class="verified-badge">
+              <i class="fas fa-check"></i>
+            </div>
+            <div class="alert alert-success">
+              <h4 class="alert-heading">
+                <i class="fas fa-check-circle me-2"></i>
+                Dokumen Terverifikasi!
+              </h4>
+              <p>Dokumen ini terdaftar di blockchain dan valid.</p>
+            </div>
+            <div class="row">
+              <div class="col-md-7">
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                      <i class="fas fa-info-circle me-2 text-primary"></i>
+                      Detail Dokumen
+                    </h5>
+                  </div>
+                  <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                          <i class="fas fa-file-pdf me-2 text-danger"></i>
+                          Nama File
+                        </span>
+                        <span class="badge bg-light text-dark">${file.name}</span>
+                      </li>
+                      <li class="list-group-item">
+                        <div>
+                          <i class="fas fa-hashtag me-2 text-primary"></i>
+                          Hash
+                        </div>
+                        <code class="d-block mt-1 bg-light p-2 rounded" style="word-break: break-all">${result.hash}</code>
+                      </li>
+                      <li class="list-group-item">
+                        <div>
+                          <i class="fas fa-user-edit me-2 text-success"></i>
+                          Penandatangan
+                        </div>
+                        <code class="d-block mt-1 bg-light p-2 rounded" style="word-break: break-all">${result.signer || 'Tidak tersedia'}</code>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="card h-100">
+                  <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                      <i class="fas fa-link me-2 text-primary"></i>
+                      Aksi
+                    </h5>
+                  </div>
+                  <div class="card-body d-flex flex-column">
+                    <a href="${result.pdfUrl}" target="_blank" class="btn btn-primary mb-2">
+                      <i class="fas fa-eye me-2"></i>
+                      Lihat Dokumen Asli
+                    </a>
+                    <a href="${result.pdfUrl}" download class="btn btn-success mb-2">
+                      <i class="fas fa-download me-2"></i>
+                      Unduh Dokumen
+                    </a>
+                    <a href="/" class="btn btn-outline-primary mt-auto">
+                      <i class="fas fa-home me-2"></i>
+                      Kembali ke Beranda
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        resultContainer.classList.remove('d-none');
+      }
+      
+      function showUnverifiedResult(fileHash, qrHash) {
+        resultContainer.innerHTML = `
+          <div class="result-card mb-4">
+            <div class="verified-badge invalid-badge">
+              <i class="fas fa-times"></i>
+            </div>
+            <div class="alert alert-danger">
+              <h4 class="alert-heading">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Dokumen Tidak Terverifikasi
+              </h4>
+              <p>Dokumen ini tidak terdaftar di blockchain atau telah dimodifikasi.</p>
+            </div>
+            <div class="card mb-3">
+              <div class="card-header bg-light">
+                <h5 class="mb-0">
+                  <i class="fas fa-info-circle me-2 text-primary"></i>
+                  Detail Dokumen
+                </h5>
+              </div>
+              <div class="card-body">
+                <ul class="list-group list-group-flush">
+                  <li class="list-group-item">
+                    <div>
+                      <i class="fas fa-hashtag me-2 text-primary"></i>
+                      Hash Dokumen
+                    </div>
+                    <code class="d-block mt-1 bg-light p-2 rounded" style="word-break: break-all">${fileHash}</code>
+                  </li>
+                  ${qrHash ? `
+                  <li class="list-group-item">
+                    <div>
+                      <i class="fas fa-qrcode me-2 text-primary"></i>
+                      Hash QR Code
+                    </div>
+                    <code class="d-block mt-1 bg-light p-2 rounded" style="word-break: break-all">${qrHash}</code>
+                  </li>
+                  ` : ''}
+                </ul>
+              </div>
+            </div>
+            <div class="alert alert-warning">
+              <i class="fas fa-exclamation-circle me-2"></i>
+              Jika Anda yakin dokumen ini asli, pastikan Anda menggunakan file yang belum dimodifikasi atau hubungi penandatangan.
+            </div>
+            <button onclick="window.location.reload()" class="btn btn-primary">
+              <i class="fas fa-redo me-2"></i>
+              Coba Lagi
+            </button>
+          </div>
+        `;
+        resultContainer.classList.remove('d-none');
+      }
+      
+      function showError(message) {
+        resultContainer.innerHTML = `
+          <div class="alert alert-danger">
+            <h4 class="alert-heading">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              Error
+            </h4>
+            <p>${message}</p>
+            <hr>
+            <button onclick="window.location.reload()" class="btn btn-outline-danger">
+              <i class="fas fa-redo me-2"></i>
+              Coba Lagi
+            </button>
+          </div>
+        `;
+        resultContainer.classList.remove('d-none');
+      }
+      
+      function showLoading(show) {
+        if (show) {
+          loadingOverlay.classList.remove('d-none');
+        } else {
+          loadingOverlay.classList.add('d-none');
+        }
+      }
+    });
+  </script>
+</body>
+</html> 
