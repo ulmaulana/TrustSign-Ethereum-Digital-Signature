@@ -28,7 +28,7 @@ import {
 } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './App.css';
-import { QrReader } from 'react-qr-reader';
+import { Scanner } from '@yudiel/react-qr-scanner';
 import { PDFDocument, rgb } from 'pdf-lib';
 import QRCode from 'qrcode';
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom';
@@ -1510,10 +1510,10 @@ function App() {
   };
 
   const handleScan = async (result) => {
-    if (!result || !result.text) return;
+    if (!result || !result[0]?.rawValue) return;
     
     try {
-      const data = JSON.parse(result.text);
+      const data = JSON.parse(result[0].rawValue);
       setVerifyHash(data.hash);
       setVerifySignatureInput(data.signature);
       
@@ -2079,23 +2079,46 @@ function App() {
                         </h4>
                       </Card.Header>
                       <Card.Body>
-                        <Form>
-                          <Form.Group className="mb-4">
-                            <Form.Label>
-                              <i className="fas fa-file me-2"></i>
-                              Upload File Dokumen yang Sudah Ditandatangani
-                            </Form.Label>
-                            <Form.Control
-                              type="file"
-                                onChange={(e) => {
-                                const selectedFile = e.target.files[0];
-                                  if (selectedFile) {
-                                    verifyDocument(selectedFile);
-                                  }
-                              }}
-                            />
-                          </Form.Group>
-                        </Form>
+                        <Row className="g-3">
+                          <Col md={6}>
+                            <Form>
+                              <Form.Group className="mb-4">
+                                <Form.Label>
+                                  <i className="fas fa-file me-2"></i>
+                                  Upload File Dokumen yang Sudah Ditandatangani
+                                </Form.Label>
+                                <Form.Control
+                                  type="file"
+                                    onChange={(e) => {
+                                    const selectedFile = e.target.files[0];
+                                      if (selectedFile) {
+                                        verifyDocument(selectedFile);
+                                      }
+                                  }}
+                                />
+                              </Form.Group>
+                            </Form>
+                          </Col>
+                          <Col md={6}>
+                            <div className="text-center">
+                              <div className="mb-3">
+                                <h6>Atau</h6>
+                              </div>
+                              <Button 
+                                variant="outline-primary" 
+                                size="lg"
+                                onClick={() => setShowScanner(true)}
+                                className="w-100"
+                              >
+                                <i className="fas fa-qrcode me-2"></i>
+                                Scan QR Code
+                              </Button>
+                              <p className="text-muted mt-2 small">
+                                Scan QR code pada dokumen yang sudah ditandatangani
+                              </p>
+                            </div>
+                          </Col>
+                        </Row>
                         
                         {verifyLoading && (
                           <div className="text-center my-3">
@@ -2362,10 +2385,10 @@ function App() {
               </Modal.Header>
               <Modal.Body>
                 <div style={{ width: '100%', maxWidth: '500px', margin: '0 auto' }}>
-                  <QrReader
+                  <Scanner
+                    onScan={handleScan}
                     constraints={{ facingMode: 'environment' }}
-                    onResult={handleScan}
-                    style={{ width: '100%' }}
+                    styles={{ container: { width: '100%' } }}
                   />
                 </div>
                 <div className="text-center mt-3">
