@@ -10,13 +10,11 @@
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
-    }
-  ],
   "rewrites": [
+    {
+      "source": "/certificate/(.*)",
+      "destination": "/frontend/index.html"
+    },
     {
       "source": "/(.*)",
       "destination": "/frontend/index.html"
