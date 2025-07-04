@@ -38,6 +38,15 @@ const mockDocuments = {
     fileName: 'signed_test_doc_1.pdf',
     timestamp: new Date().toISOString(),
     pdfUrl: '/uploads/mock-document.pdf'
+  },
+  'testdoc3-mco2l94i-rhr0po': {
+    hash: 'e123abc456def789012345678901234567890abcdef1234567890abcdef123456',
+    signature: '0xabc123def456789012345678901234567890abcdef123456789012345678901234',
+    signer: '0xca01c8c68840cd1c9fdf06f124723a5339224096',
+    txHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
+    fileName: 'signed_test_doc_3.pdf',
+    timestamp: new Date().toISOString(),
+    pdfUrl: '/uploads/mock-document-3.pdf'
   }
 };
 
