@@ -181,14 +181,22 @@ function CertificatePage() {
       try {
         setLoading(true);
         console.log('Fetching certificate data for hash:', hash);
+        console.log('API URL being used:', getApiUrl(`/api/certificate/${hash}`));
         
         // Fetch ke backend API
         const res = await fetch(getApiUrl(`/api/certificate/${hash}`));
         
         if (!res.ok) {
-          const errorData = await res.json();
-          console.error('Server error:', errorData);
-          throw new Error(errorData.error || 'Dokumen tidak ditemukan');
+          console.error('API Response not OK:', res.status, res.statusText);
+          let errorData;
+          try {
+            errorData = await res.json();
+            console.error('Server error response:', errorData);
+          } catch (e) {
+            console.error('Failed to parse error response:', e);
+            errorData = { error: `Server error: ${res.status} ${res.statusText}` };
+          }
+          throw new Error(errorData.error || `Dokumen tidak ditemukan (${res.status})`);
         }
         
         const data = await res.json();
