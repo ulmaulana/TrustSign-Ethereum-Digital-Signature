@@ -10,25 +10,14 @@
       }
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/certificate/(.*)",
-      "destination": "/frontend/index.html"
+      "src": "/certificate/(.*)",
+      "dest": "/frontend/index.html"
     },
     {
-      "source": "/(.*)",
-      "destination": "/frontend/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, no-store, must-revalidate"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/frontend/index.html"
     }
   ]
 } 
