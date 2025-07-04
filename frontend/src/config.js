@@ -30,4 +30,5 @@ export const getApiUrl = (endpoint) => {
 
 // Log current environment
 console.log('🌍 Environment:', currentEnv);
-console.log('🔗 API Base URL:', API_CONFIG.BASE_URL); 
+console.log('🔗 API Base URL:', API_CONFIG.BASE_URL);
+console.log('🆕 Config Updated: Backend API at trustsign-api.vercel.app'); 
